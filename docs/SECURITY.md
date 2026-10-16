@@ -20,6 +20,6 @@ enforces a boundary.
 - TLS inside the cluster (traffic is plain HTTP on the cluster network). Add a service mesh or
   cert-manager in production.
 - High availability: one replica of everything, on two home PCs.
-- Real identities: department keys stand in for users. Production should map Entra ID groups to
-  LiteLLM teams.
+- Real identities: department keys stand in for users, and the browser UI's department picker
+  (`demo/web.py`) is the same stand-in. Production should map Entra ID groups to LiteLLM teams.
 - Real data: everything in `data/` is fictional.

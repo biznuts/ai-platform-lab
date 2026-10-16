@@ -4,7 +4,7 @@ Two physical machines on a home LAN, both running Ubuntu Server 26.04.1 LTS, for
 
 ```mermaid
 flowchart LR
-  user["Client on lab-cp<br/>demo/ask.py<br/>(dept key)"] -- "port-forward :4000" --> litellm
+  user["Client on lab-cp<br/>demo/ask.py or demo/web.py<br/>(dept key)"] -- "port-forward :4000" --> litellm
 
   subgraph lab-cp ["lab-cp · 16 cores · 61 GB RAM · no GPU"]
     subgraph platform ["ns: platform"]

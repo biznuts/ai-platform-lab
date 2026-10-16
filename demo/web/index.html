@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Platform Lab · Ask the knowledge base</title>
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Ask the knowledge base</h1>
+    <p class="muted">Every question goes through the LiteLLM gateway with the chosen department's key. The
+      gateway decides which models and tools that key may use; this page cannot widen it.</p>
+  </header>
+
+  <form id="ask" autocomplete="off">
+    <div class="row">
+      <label>Department
+        <select name="dept">
+          <option value="dept-a">Dept A · grants office (confidential tier)</option>
+          <option value="dept-b">Dept B · teaching policy (public tier)</option>
+        </select>
+      </label>
+      <label>Model
+        <select name="model">
+          <option value="local-private">local-private · vLLM on the lab GPU</option>
+          <option value="cloud-general">cloud-general · Cohere API</option>
+        </select>
+      </label>
+    </div>
+
+    <fieldset class="row">
+      <legend>Mode</legend>
+      <label class="inline"><input type="radio" name="mode" value="model" checked> Ask the model</label>
+      <label class="inline"><input type="radio" name="mode" value="tool"> Call a tool directly (leakage test)</label>
+      <select name="tool" aria-label="Tool to call" disabled>
+        <option value="kb_dept_a-search_kb">kb_dept_a-search_kb</option>
+        <option value="kb_dept_b-search_kb">kb_dept_b-search_kb</option>
+      </select>
+    </fieldset>
+
+    <label>Question
+      <textarea name="question" rows="3" maxlength="500" required
+        placeholder="e.g. How many business days before the funder's deadline must an application reach the grants office?"></textarea>
+    </label>
+    <div class="row actions">
+      <button type="submit">Ask</button>
+      <span id="count" class="muted">0 / 500</span>
+      <span id="busy" class="muted" hidden>Waiting for the gateway…</span>
+    </div>
+  </form>
+
+  <section aria-labelledby="examples-title">
+    <h2 id="examples-title">Demo scenarios</h2>
+    <div id="examples" class="examples"></div>
+  </section>
+
+  <section aria-labelledby="results-title">
+    <h2 id="results-title">Results</h2>
+    <p id="empty" class="muted">Nothing asked yet. Newest results appear first.</p>
+    <div id="results"></div>
+  </section>
+
+  <footer class="muted">All knowledge-base data is fictional. Questions are not logged by this page; the MCP
+    audit log keeps only a SHA-256 digest.</footer>
+</main>
+</body>
+</html>

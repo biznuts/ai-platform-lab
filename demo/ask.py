@@ -13,13 +13,14 @@ import asyncio
 import json
 import os
 import sys
+from collections.abc import AsyncIterator
 from pathlib import Path
 
 import httpx
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
-from openai import APIStatusError, OpenAI
+from openai import APIStatusError, AsyncOpenAI
 
 BASE = os.environ.get("LITELLM_URL", "http://localhost:4000")
 KEYS = Path(__file__).with_name("keys.json")  # written by litellm/create-teams-and-keys.sh, gitignored
@@ -70,27 +71,34 @@ def model_names(tools) -> dict[str, object]:
     return names
 
 
-async def ask(dept: str, question: str, model: str, force_tool: str | None) -> None:
+async def steps(dept: str, question: str, model: str, force_tool: str | None,
+                caller: str | None = None) -> AsyncIterator[dict]:
+    """Run one question and yield what happens, one event at a time. Shared by this CLI and demo/web.py.
+
+    Events: tools, direct (force_tool result), call (the model used a tool), refused (by the gateway),
+    answer, stopped.
+    """
     key = json.loads(KEYS.read_text(encoding="utf-8"))[dept]
-    headers = {"x-litellm-api-key": f"Bearer {key}",          # LiteLLM's MCP endpoint reads the key here
-               "x-litellm-end-user-id": f"demo-user-{dept}"}  # forwarded to the MCP audit log
+    headers = {"x-litellm-api-key": f"Bearer {key}",  # LiteLLM's MCP endpoint reads the key here
+               "x-litellm-end-user-id": caller or f"demo-user-{dept}"}  # forwarded to the MCP audit log
     async with streamablehttp_client(f"{BASE}/mcp/", headers=headers) as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools = (await session.list_tools()).tools
-            print(f"[{dept}] tools visible to this key: {sorted(t.name for t in tools) or 'none'}")
+            yield {"event": "tools", "names": sorted(t.name for t in tools)}
 
             if force_tool:  # call a tool directly, bypassing the model (used by the leakage test)
                 try:
                     res = await session.call_tool(force_tool, {"query": question})
                 except Exception as e:
-                    print(f"REFUSED: {type(e).__name__}: {e}")
+                    yield {"event": "direct", "allowed": False, "text": f"{type(e).__name__}: {e}", "error": True}
                     return
                 # LiteLLM reports a permission refusal as a tool result with isError set.
-                print(("REFUSED: " if res.isError else "ALLOWED: ") + tool_text(res)[:200])
+                yield {"event": "direct", "allowed": not res.isError, "text": tool_text(res)[:200],
+                       "sources": source_ids(res)}
                 return
 
-            llm = OpenAI(base_url=f"{BASE}/v1", api_key=key)
+            llm = AsyncOpenAI(base_url=f"{BASE}/v1", api_key=key)
             by_name = model_names(tools)
             oa_tools = [{"type": "function", "function": {
                 "name": n, "description": t.description or "", "parameters": t.inputSchema}}
@@ -100,17 +108,18 @@ async def ask(dept: str, question: str, model: str, force_tool: str | None) -> N
 
             for _ in range(MAX_STEPS):
                 try:
-                    resp = llm.chat.completions.create(model=model, messages=messages, tools=oa_tools or None,
-                                                      temperature=0)  # stable answers for RAG
+                    resp = await llm.chat.completions.create(model=model, messages=messages,
+                                                             tools=oa_tools or None,
+                                                             temperature=0)  # stable answers for RAG
                 except APIStatusError as e:  # e.g. 403 when the key may not use this model
-                    print(f"REFUSED by the gateway: HTTP {e.status_code}: {str(e.message)[:200]}")
+                    yield {"event": "refused", "status": e.status_code, "text": str(e.message)[:200]}
                     return
                 msg = resp.choices[0].message
                 if not msg.tool_calls:
-                    print(f"\n[{model}] {msg.content}")
                     # Deterministic citations: models do not always cite (Cohere often skips it), so the
                     # client always lists the passages the tool really returned.
-                    print("Retrieved sources: " + (", ".join(dict.fromkeys(retrieved)) or "none"))
+                    yield {"event": "answer", "model": model, "text": msg.content,
+                           "sources": list(dict.fromkeys(retrieved))}
                     return
                 # Echo back only the standard fields. Providers differ: Cohere rejects extras such as the
                 # `index` LiteLLM adds to each tool call, while vLLM ignores them.
@@ -130,10 +139,29 @@ async def ask(dept: str, question: str, model: str, force_tool: str | None) -> N
                         result = await session.call_tool(tool.name, args)
                         content = tool_text(result)
                         retrieved += source_ids(result)
-                    target = tool.name if tool else "refused"
-                    print(f"  model called {call.function.name} -> {target}: {len(content)} chars")
+                    yield {"event": "call", "name": call.function.name,
+                           "target": tool.name if tool else "refused", "chars": len(content)}
                     messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
-            print(f"stopped after {MAX_STEPS} tool rounds")
+            yield {"event": "stopped", "rounds": MAX_STEPS}
+
+
+async def ask(dept: str, question: str, model: str, force_tool: str | None) -> None:
+    """Print each event. verify-controls.sh and run-demo.sh read these lines, so keep their format."""
+    async for e in steps(dept, question, model, force_tool):
+        match e["event"]:
+            case "tools":
+                print(f"[{dept}] tools visible to this key: {e['names'] or 'none'}")
+            case "direct":
+                print(("ALLOWED: " if e["allowed"] else "REFUSED: ") + e["text"])
+            case "refused":
+                print(f"REFUSED by the gateway: HTTP {e['status']}: {e['text']}")
+            case "answer":
+                print(f"\n[{e['model']}] {e['text']}")
+                print("Retrieved sources: " + (", ".join(e["sources"]) or "none"))
+            case "call":
+                print(f"  model called {e['name']} -> {e['target']}: {e['chars']} chars")
+            case "stopped":
+                print(f"stopped after {e['rounds']} tool rounds")
 
 
 def main() -> None:

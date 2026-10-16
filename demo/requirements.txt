@@ -1,3 +1,6 @@
 # Exact pins; keep mcp in step with mcp-servers/.
 mcp==1.12.4
 openai==1.99.9
+# demo/web.py. Both already come with mcp; pinned because web.py imports them directly.
+starlette==1.7.0
+uvicorn==0.54.0

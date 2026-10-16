@@ -84,6 +84,15 @@ SSH access to both nodes and, for the cloud tier only, a personal Cohere trial k
    PYTHON=.venv/bin/python bash demo/run-demo.sh   # needs vLLM up; step 2 needs the Cohere key
    ```
 
+7. **Optional: ask from a browser** (`demo/web.py`, same code path as `demo/ask.py`):
+   ```bash
+   .venv/bin/python demo/web.py   # needs the port-forward from step 4; listens on 127.0.0.1:8090 only
+   # on your PC: ssh -L 8090:127.0.0.1:8090 <you>@<lab-cp-ip>, then open http://127.0.0.1:8090
+   ```
+   Pick a department and a model, or run one of the demo scenarios. Each result shows the tools the key
+   sees, every tool call, the answer with its citations checked against the retrieved passages, and
+   any refusal. The keys stay on `lab-cp`; the browser only sends a department name.
+
 Unit tests (no cluster needed): `cd mcp-servers && pip install -r requirements.txt pytest && python -m pytest`.
 
 ### What `verify-controls.sh` checks
