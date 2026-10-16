@@ -80,17 +80,19 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
                 caller: str | None = None) -> AsyncIterator[dict]:
     """Run one question and yield what happens, one event at a time. Shared by this CLI and demo/web.py.
 
-    Events: tools, direct (force_tool result), call (the model used a tool), refused (by the gateway),
-    answer, stopped. Times are in milliseconds: "ms" for one tool call, "model_ms" for all model calls.
+    Events: tools, model (one model call), direct (force_tool result), call (the model used a tool),
+    refused (by the gateway), answer, stopped. Times are in milliseconds: "ms" for one step, "model_ms"
+    for all model calls. The web UI replays this sequence on its diagram.
     """
     key = json.loads(KEYS.read_text(encoding="utf-8"))[dept]
     headers = {"x-litellm-api-key": f"Bearer {key}",  # LiteLLM's MCP endpoint reads the key here
                "x-litellm-end-user-id": caller or f"demo-user-{dept}"}  # forwarded to the MCP audit log
     async with streamablehttp_client(f"{BASE}/mcp/", headers=headers) as (read, write, _):
         async with ClientSession(read, write) as session:
+            started = time.perf_counter()
             await session.initialize()
             tools = (await session.list_tools()).tools
-            yield {"event": "tools", "names": sorted(t.name for t in tools)}
+            yield {"event": "tools", "names": sorted(t.name for t in tools), "ms": elapsed_ms(started)}
 
             if force_tool:  # call a tool directly, bypassing the model (used by the leakage test)
                 started = time.perf_counter()
@@ -120,10 +122,13 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
                                                              tools=oa_tools or None,
                                                              temperature=0)  # stable answers for RAG
                 except APIStatusError as e:  # e.g. 403 when the key may not use this model
-                    yield {"event": "refused", "status": e.status_code, "text": str(e.message)[:200]}
+                    yield {"event": "refused", "status": e.status_code, "text": str(e.message)[:200],
+                           "ms": elapsed_ms(started)}
                     return
-                model_ms += elapsed_ms(started)
+                took = elapsed_ms(started)
+                model_ms += took
                 msg = resp.choices[0].message
+                yield {"event": "model", "ms": took, "tool_calls": len(msg.tool_calls or [])}
                 if not msg.tool_calls:
                     # Deterministic citations: models do not always cite (Cohere often skips it), so the
                     # client always lists the passages the tool really returned.

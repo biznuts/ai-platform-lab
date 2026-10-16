@@ -75,7 +75,7 @@ def public(e: dict, ref: str, dept: str) -> dict:
             log.info("ref=%s gateway refused: HTTP %s %s", ref, e["status"], e["text"])
             text = {403: "This department's key may not use this model.",
                     401: "The gateway rejected the key."}.get(e["status"], "The gateway refused the request.")
-            return {"event": "refused", "status": e["status"], "text": text}
+            return {"event": "refused", "status": e["status"], "text": text, "ms": e["ms"]}
     return e
 
 
@@ -131,6 +131,7 @@ def static(name: str, media_type: str):
 app = Starlette(routes=[
     Route("/", static("index.html", "text/html; charset=utf-8")),
     Route("/app.js", static("app.js", "text/javascript; charset=utf-8")),
+    Route("/flow.js", static("flow.js", "text/javascript; charset=utf-8")),
     Route("/style.css", static("style.css", "text/css; charset=utf-8")),
     Route("/api/ask", api_ask, methods=["POST"]),
 ])

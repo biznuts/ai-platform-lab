@@ -91,7 +91,9 @@ SSH access to both nodes and, for the cloud tier only, a personal Cohere trial k
    ```
    Pick a department and a model, or run one of the demo scenarios. Each result shows the tools the key
    sees, every tool call, the answer with its citations checked against the retrieved passages, and
-   any refusal. The keys stay on `lab-cp`; the browser only sends a department name.
+   any refusal. The keys stay on `lab-cp`; the browser only sends a department name. A diagram then
+   replays the request hop by hop (gateway, model, MCP server, Qdrant, or where it was refused) with
+   each hop's measured time, built from the same events.
 
 Unit tests (no cluster needed): `cd mcp-servers && pip install -r requirements.txt pytest && python -m pytest`.
 

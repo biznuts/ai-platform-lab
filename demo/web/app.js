@@ -21,6 +21,26 @@ const form = document.getElementById("ask");
 const results = document.getElementById("results");
 const busy = document.getElementById("busy");
 const count = document.getElementById("count");
+const flowPanel = document.getElementById("flow");
+const compose = document.getElementById("compose");
+const composeBar = document.getElementById("compose-bar");
+
+// After Ask, fold the form and the scenarios into one line so the diagram moves up the screen.
+function fold(req) {
+  const who = req.tool ? `${req.dept} → ${req.tool}` : `${req.dept} · ${req.model}`;
+  document.getElementById("compose-text").textContent = `${who} · ${req.question}`;
+  compose.classList.add("folded");
+  compose.inert = true;  // nothing in the folded form can take focus
+  composeBar.hidden = false;
+}
+
+function unfold() {
+  compose.classList.remove("folded");
+  compose.inert = false;
+  composeBar.hidden = true;
+  form.elements.question.focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -99,6 +119,11 @@ function card(req, res, body) {
     id.title = LOG_ID_HELP;
     meta.append(meta.childNodes.length ? " · " : "", id);
   }
+  const show = el("button", "show-flow", "▶ Show flow");
+  show.type = "button";
+  show.title = "Replay this request on the diagram";
+  show.addEventListener("click", () => { Flow.play(req, body); flowPanel.scrollIntoView({ behavior: "smooth", block: "start" }); });
+  meta.append(" ", show);
   head.append(meta);
   c.append(head, el("p", "question", req.question));
 
@@ -111,6 +136,8 @@ function card(req, res, body) {
     switch (e.event) {
       case "tools":
         c.append(line("Tools this key sees", chips(e.names, "none")));
+        break;
+      case "model":  // shown in the flow panel, with its own time
         break;
       case "call":
         c.append(line("Tool call",
@@ -149,6 +176,9 @@ async function submit(event) {
 
   form.querySelector("button").disabled = true;
   busy.hidden = false;
+  fold(req);
+  Flow.waiting(req);
+  window.scrollTo({ top: 0, behavior: "smooth" });
   let res = {}, body;
   try {
     const r = await fetch("/api/ask", {
@@ -164,6 +194,7 @@ async function submit(event) {
   }
   document.getElementById("empty").hidden = true;
   results.prepend(card(req, res, body));
+  Flow.finish(req, body);
 }
 
 function fill(x) {
@@ -186,6 +217,7 @@ for (const x of EXAMPLES) {
 }
 
 form.addEventListener("submit", submit);
+document.getElementById("unfold").addEventListener("click", unfold);
 form.addEventListener("change", syncMode);
 form.elements.question.addEventListener("input", syncCount);
 syncMode();

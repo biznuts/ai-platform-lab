@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Platform Lab · Ask the knowledge base</title>
 <link rel="stylesheet" href="/style.css">
+<script src="/flow.js" defer></script>
 <script src="/app.js" defer></script>
 </head>
 <body>
@@ -15,6 +16,13 @@
       gateway decides which models and tools that key may use; this page cannot widen it.</p>
   </header>
 
+  <div id="compose-bar" class="compose-bar" hidden>
+    <span id="compose-text" class="compose-text"></span>
+    <button id="unfold" type="button">✎ Ask another question</button>
+  </div>
+
+  <div id="compose" class="compose">
+  <div class="compose-inner">
   <form id="ask" autocomplete="off">
     <div class="row">
       <label>Department
@@ -55,6 +63,110 @@
   <section aria-labelledby="examples-title">
     <h2 id="examples-title">Demo scenarios</h2>
     <div id="examples" class="examples"></div>
+  </section>
+  </div>
+  </div>
+
+  <section id="flow" class="flow" aria-labelledby="flow-title">
+    <h2 id="flow-title">How the request flowed</h2>
+    <div class="flow-head">
+      <span id="flow-label" class="muted">Ask a question to see its path through the platform.</span>
+      <button id="flow-replay" class="flow-replay" type="button" hidden>↻ Replay</button>
+    </div>
+    <svg id="flow-diagram" viewBox="0 0 730 282" role="img" aria-labelledby="flow-svg-title flow-svg-desc">
+      <title id="flow-svg-title">The lab platform</title>
+      <desc id="flow-svg-desc">The browser calls web.py, which calls the LiteLLM gateway with the department's key.
+        The gateway sends model calls to vLLM on lab-gpu or, for the public tier only, to the Cohere API, and each
+        department's tool calls only to that department's MCP server. Only the MCP servers reach the embedding
+        service and Qdrant. The steps below the diagram describe the last request.</desc>
+      <defs>
+        <marker id="ah-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-ink"/></marker>
+        <marker id="ah-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-teal"/></marker>
+        <marker id="ah-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-amber"/></marker>
+        <marker id="ah-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-blue"/></marker>
+      </defs>
+
+      <rect x="24" y="46" width="176" height="40" rx="6" class="box" data-box="client"/>
+      <text x="112" y="62" class="bt" text-anchor="middle">Browser → web.py</text>
+      <text x="112" y="77" class="bs" text-anchor="middle">keys stay on lab-cp</text>
+
+      <rect x="258" y="4" width="466" height="274" rx="10" class="node"/>
+      <text x="272" y="20" class="nodelabel">lab-cp</text>
+      <text x="314" y="20" class="nodesub">K3s server · no GPU</text>
+
+      <rect x="270" y="28" width="442" height="66" rx="7" class="ns ns-platform"/>
+      <text x="280" y="40" class="nslabel">ns: platform</text>
+      <rect x="282" y="46" width="232" height="40" rx="6" class="box" data-box="gw"/>
+      <text x="398" y="62" class="bt" text-anchor="middle">LiteLLM gateway</text>
+      <text x="398" y="77" class="bs" text-anchor="middle">keys · teams · budgets · access lists</text>
+      <rect x="548" y="46" width="152" height="40" rx="6" class="box" data-box="pg"/>
+      <text x="624" y="62" class="bt" text-anchor="middle">Postgres</text>
+      <text x="624" y="77" class="bs" text-anchor="middle">keys · spend logs</text>
+      <line x1="514" y1="66" x2="546" y2="66" class="edge" marker-end="url(#ah-ink)"/>
+      <line x1="200" y1="66" x2="280" y2="66" class="edge" marker-end="url(#ah-ink)"/>
+
+      <rect x="270" y="122" width="442" height="64" rx="7" class="ns ns-mcp"/>
+      <text x="280" y="134" class="nslabel">ns: mcp</text>
+      <rect x="282" y="142" width="204" height="36" rx="6" class="box" data-box="kbf"/>
+      <text x="384" y="157" class="bt" text-anchor="middle">kb-finance</text>
+      <text x="384" y="171" class="bs" text-anchor="middle">one tool: search_kb · read-only</text>
+      <rect x="498" y="142" width="202" height="36" rx="6" class="box" data-box="khr"/>
+      <text x="599" y="157" class="bt" text-anchor="middle">kb-hr</text>
+      <text x="599" y="171" class="bs" text-anchor="middle">one tool: search_kb · read-only</text>
+
+      <rect x="270" y="206" width="442" height="64" rx="7" class="ns ns-data"/>
+      <text x="280" y="218" class="nslabel">ns: data</text>
+      <text x="491" y="218" class="nodesub" text-anchor="middle">ingress from MCP pods only</text>
+      <rect x="282" y="226" width="204" height="36" rx="6" class="box" data-box="emb"/>
+      <text x="384" y="241" class="bt" text-anchor="middle">Embeddings (TEI)</text>
+      <text x="384" y="255" class="bs" text-anchor="middle">bge-small · runs on CPU</text>
+      <rect x="498" y="226" width="202" height="36" rx="6" class="box" data-box="qd"/>
+      <text x="599" y="241" class="bt" text-anchor="middle">Qdrant</text>
+      <text x="599" y="255" class="bs" text-anchor="middle">collections kb_finance | kb_hr</text>
+
+      <path d="M384 86 V140" class="edge edge-mcp" marker-end="url(#ah-blue)"/>
+      <text x="390" y="116" class="el el-mcp">finance key only</text>
+      <path d="M496 86 V108 H599 V140" class="edge edge-mcp" marker-end="url(#ah-blue)"/>
+      <text x="606" y="125" class="el el-mcp">hr key only</text>
+
+      <path d="M384 178 V224" class="edge" marker-end="url(#ah-ink)"/>
+      <path d="M599 178 V224" class="edge" marker-end="url(#ah-ink)"/>
+      <line x1="384" y1="196" x2="599" y2="196" class="edge"/>
+
+      <rect x="6" y="122" width="124" height="156" rx="10" class="node"/>
+      <text x="16" y="138" class="nodelabel">lab-gpu</text>
+      <text x="16" y="151" class="nodesub">RTX 3070 Ti · 8 GB</text>
+      <rect x="14" y="158" width="108" height="112" rx="7" class="ns ns-models"/>
+      <text x="22" y="170" class="nslabel">ns: models</text>
+      <rect x="22" y="176" width="92" height="72" rx="6" class="box" data-box="vllm"/>
+      <text x="68" y="192" class="bt" text-anchor="middle">vLLM</text>
+      <text x="68" y="206" class="bs" text-anchor="middle">Qwen2.5-3B</text>
+      <text x="68" y="218" class="bs" text-anchor="middle">AWQ 4-bit</text>
+      <text x="68" y="233" class="bs bs-teal" text-anchor="middle">local-private</text>
+      <text x="68" y="263" class="bs" text-anchor="middle">taint: GPU pods only</text>
+
+      <rect x="150" y="174" width="96" height="58" rx="6" class="box box-ext" data-box="cohere"/>
+      <text x="198" y="192" class="bt" text-anchor="middle">Cohere API</text>
+      <text x="198" y="206" class="bs bs-amber" text-anchor="middle">cloud-general</text>
+      <text x="198" y="219" class="bs" text-anchor="middle">public tier only</text>
+      <text x="198" y="248" class="bs" text-anchor="middle">outside the lab</text>
+
+      <path d="M300 86 V104 H140 V214 H116" class="edge edge-local" marker-end="url(#ah-teal)"/>
+      <text x="150" y="99" class="el el-local">every tier</text>
+      <path d="M330 86 V114 H198 V172" class="edge edge-cloud" marker-end="url(#ah-amber)"/>
+
+      <g class="fx" aria-hidden="true">
+        <circle class="trail" r="3.2"/><circle class="trail" r="2.8"/><circle class="trail" r="2.4"/>
+        <circle class="trail" r="2"/><circle class="trail" r="1.6"/>
+        <circle class="dot" r="4.6"/>
+        <g class="mark"><g class="mark-in">
+          <circle r="7.5"/><path d="M-3,-3 L3,3 M3,-3 L-3,3"/><text x="11" y="3.5"></text>
+        </g></g>
+      </g>
+    </svg>
+    <ol id="flow-steps" class="flow-steps"></ol>
+    <p class="muted small">The path and the times are from the request itself. The replay runs every hop at the
+      same pace so that the short ones stay visible, so it is not to scale.</p>
   </section>
 
   <section aria-labelledby="results-title">

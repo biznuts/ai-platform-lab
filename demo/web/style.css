@@ -1,11 +1,13 @@
 :root {
   --bg: #eef0f3; --page: #ffffff; --ink: #1d2733; --muted: #5b6672; --line: #c9d1da; --chip: #f3f5f8;
   --accent: #2f5fb3; --ok: #1f7a3a; --bad: #b3261e; --warn: #b56700; --mark: #e3eefc;
+  --node: #8d97a3; --teal: #0f7c7a; --platform: #eaf1fc; --mcp: #e9f5ed; --data: #fbf3e4; --models: #f0ecfb;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #121417; --page: #1b1f24; --ink: #e5e9ee; --muted: #a2acb8; --line: #3a424d; --chip: #262c34;
     --accent: #7ea9f3; --ok: #5fcf86; --bad: #f2867e; --warn: #f0a640; --mark: #23344f;
+    --node: #6f7987; --teal: #4cc3bf; --platform: #1e2a3b; --mcp: #1c2f25; --data: #322819; --models: #29243d;
   }
 }
 
@@ -60,6 +62,74 @@ a.chip, mark.cite a { color: var(--accent); text-decoration: none; }
 a.chip:hover, mark.cite a:hover { text-decoration: underline; }
 abbr[title] { cursor: help; }
 mark.cite.unverified { background: none; outline: 1.5px dashed var(--warn); }
+/* The form folds away after Ask (app.js), so the diagram sits higher on the screen. */
+.compose { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .35s ease; }
+.compose.folded { grid-template-rows: 0fr; }
+.compose-inner { min-height: 0; overflow: hidden; }
+.compose-bar { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 6px 8px 6px 12px;
+  background: var(--chip); border: 1px solid var(--line); border-radius: 8px; }
+.compose-bar[hidden] { display: none; }
+.compose-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+#unfold { flex: none; background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 5px 12px;
+  font-weight: 600; font-size: 13px; cursor: pointer; }
+
+/* Flow panel: the platform diagram, replaying the last request (flow.js). */
+.flow-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 4px 0 6px; min-height: 30px; }
+.flow-replay, .show-flow { font-size: 13px; background: var(--page); color: var(--accent); border: 1px solid var(--accent);
+  border-radius: 6px; padding: 3px 10px; cursor: pointer; white-space: nowrap; flex: none; }
+.flow-replay:hover, .show-flow:hover { background: var(--mark); }
+.show-flow { font-size: 12px; padding: 1px 8px; }
+#flow-diagram { width: 100%; height: auto; display: block; }
+#flow-diagram .node { fill: none; stroke: var(--node); stroke-width: 1.2; }
+#flow-diagram .ns { stroke: none; }
+#flow-diagram .ns-platform { fill: var(--platform); } #flow-diagram .ns-mcp { fill: var(--mcp); }
+#flow-diagram .ns-data { fill: var(--data); } #flow-diagram .ns-models { fill: var(--models); }
+#flow-diagram .box { fill: var(--page); stroke: var(--line); stroke-width: 1; transition: stroke .3s, stroke-width .3s; }
+#flow-diagram .box-ext { stroke-dasharray: 4 3; stroke: var(--warn); }
+#flow-diagram text { font-family: "Segoe UI", system-ui, Arial, sans-serif; }
+#flow-diagram .nodelabel { font-size: 11.5px; font-weight: 700; fill: var(--ink); }
+#flow-diagram .nodesub, #flow-diagram .nslabel { font-size: 9.6px; fill: var(--muted); }
+#flow-diagram .nslabel { font-weight: 600; }
+#flow-diagram .bt { font-size: 11px; font-weight: 700; fill: var(--ink); }
+#flow-diagram .bs { font-size: 9.4px; fill: var(--muted); }
+#flow-diagram .bs-teal { fill: var(--teal); font-weight: 600; } #flow-diagram .bs-amber { fill: var(--warn); font-weight: 600; }
+#flow-diagram .edge { fill: none; stroke: var(--node); stroke-width: 1.4; }
+#flow-diagram .edge-local { stroke: var(--teal); stroke-width: 1.8; }
+#flow-diagram .edge-cloud { stroke: var(--warn); stroke-width: 1.8; stroke-dasharray: 5 3; }
+#flow-diagram .edge-mcp { stroke: var(--accent); stroke-width: 1.6; }
+#flow-diagram .el { font-size: 9.4px; font-weight: 600; }
+#flow-diagram .el-mcp { fill: var(--accent); } #flow-diagram .el-local { fill: var(--teal); }
+#flow-diagram .ah-ink { fill: var(--node); } #flow-diagram .ah-teal { fill: var(--teal); }
+#flow-diagram .ah-amber { fill: var(--warn); } #flow-diagram .ah-blue { fill: var(--accent); }
+
+#flow-diagram .box.hot { stroke: var(--accent); stroke-width: 2.4; }
+#flow-diagram .box.ok { stroke: var(--ok); stroke-width: 2.4; }
+#flow-diagram .box.deny { stroke: var(--bad); stroke-width: 2.4; }
+#flow-diagram .box.wait { stroke: var(--accent); stroke-width: 2.4; animation: wait 1.2s ease-in-out infinite; }
+@keyframes wait { 50% { stroke-opacity: .25; } }
+.dot, .trail { opacity: 0; transition: opacity .2s; }
+.dot.on { opacity: 1; } .trail.on { opacity: .28; }
+.c-ink { fill: var(--node); } .c-teal { fill: var(--teal); } .c-amber { fill: var(--warn); } .c-blue { fill: var(--accent); }
+.c-bad { fill: var(--bad); } .c-ok { fill: var(--ok); }
+.mark { opacity: 0; transition: opacity .2s; }
+.mark.on { opacity: 1; }
+.mark.on .mark-in { animation: pop .3s cubic-bezier(.3, 1.6, .5, 1) both; transform-box: fill-box; transform-origin: center; }
+@keyframes pop { from { opacity: 0; transform: scale(.4); } }
+.mark circle { fill: var(--page); stroke: var(--bad); stroke-width: 1.6; }
+.mark path { stroke: var(--bad); stroke-width: 1.8; stroke-linecap: round; }
+.mark text { font: 700 9.6px "Segoe UI", system-ui, Arial, sans-serif; fill: var(--bad); }
+
+.flow-steps { margin: 8px 0 4px; padding-left: 22px; font-size: 14px; }
+.flow-steps li { padding: 2px 8px; border-radius: 0 4px 4px 0; opacity: .45; transition: opacity .3s, background-color .3s, box-shadow .3s; }
+.flow-steps li.done { opacity: 1; }
+.flow-steps li.now { opacity: 1; background: var(--mark); box-shadow: -4px 0 0 var(--accent); }
+.flow-steps li.now.deny { box-shadow: -4px 0 0 var(--bad); }
+.flow-steps li.deny.done, .flow-steps li.deny.now { color: var(--bad); }
+.flow-steps li.good.done, .flow-steps li.good.now { color: var(--ok); }
+.flow-steps .ms { float: right; margin-left: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.flow-steps li::marker { color: var(--accent); font-weight: 700; }
+.small { font-size: 12.5px; margin: 2px 0 0; }
+
 footer { margin-top: 22px; font-size: 13px; border-top: 1px solid var(--line); padding-top: 6px; }
 
 @media (max-width: 640px) {
