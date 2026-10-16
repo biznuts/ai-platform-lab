@@ -3,7 +3,7 @@
 
 locals {
   namespaces = ["platform", "models", "mcp", "data"]
-  secret     = { for name in ["litellm_master_key", "postgres_password", "cohere_api_key", "mcp_token_dept_a", "mcp_token_dept_b"] : name => trimspace(file("${path.module}/secrets/${name}")) }
+  secret     = { for name in ["litellm_master_key", "postgres_password", "cohere_api_key", "mcp_token_finance", "mcp_token_hr"] : name => trimspace(file("${path.module}/secrets/${name}")) }
 }
 
 resource "kubernetes_namespace_v1" "ns" {

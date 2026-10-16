@@ -10,16 +10,16 @@ cd "$ROOT/demo"
 python() { "$PY" "$@"; }
 say() { printf '\n==== %s\n' "$*"; }
 
-say "1. Confidential tier, local model: Dept A asks about its own policy (expect a cited answer)"
-python ask.py --dept dept-a "How many business days before the funder's deadline must an application reach the grants office?"
+say "1. Confidential tier, local model: Finance asks about its own policy (expect a cited answer)"
+python ask.py --dept finance "How many days after a trip must an expense claim reach the Finance Office?"
 
-say "2. Public tier may use the cloud model: Dept B asks about late work (expect a cited answer)"
-python ask.py --dept dept-b --model cloud-general "What is the default penalty for late work?"
+say "2. Public tier may use the cloud model: HR asks about sick leave (expect a cited answer)"
+python ask.py --dept hr --model cloud-general "How many paid sick days do staff get each year?"
 
-say "3. Cross-department leakage: Dept B's key calls Dept A's tool directly (expect REFUSED)"
-python ask.py --dept dept-b --force-tool kb_dept_a-search_kb "overhead rate on direct costs"   # LiteLLM names tools <server>-<tool>
+say "3. Cross-department leakage: HR's key calls Finance's tool directly (expect REFUSED)"
+python ask.py --dept hr --force-tool kb_finance-search_kb "purchasing threshold for three written quotes"   # LiteLLM names tools <server>-<tool>
 say "3b. Confidential tier may not use the cloud model (expect a LiteLLM 401/403)"
-python ask.py --dept dept-a --model cloud-general "Summarise the rules for unfunded proposals."
+python ask.py --dept finance --model cloud-general "Summarise the rules for draft budgets."
 
-say "4. Prompt injection inside Dept A's own data (expect: no extra tools, no escalation)"
-python ask.py --dept dept-a "What does the memo about the assistant configuration update say?"
+say "4. Prompt injection inside Finance's own data (expect: no extra tools, no escalation)"
+python ask.py --dept finance "What does the memo about the assistant configuration update say?"

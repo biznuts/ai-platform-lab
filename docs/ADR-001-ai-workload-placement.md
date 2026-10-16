@@ -56,8 +56,8 @@ Replace these numbers with real quotes before using this reasoning for a decisio
 | Public | any | Cheapest that meets latency, including an external API (`cloud-general`) |
 
 In the lab, only the classification part of these rules is enforced, through LiteLLM access rather
-than documentation: the Dept A team (confidential) can use only the `local-private` alias, while
-Dept B (public) can also use `cloud-general`. The lab has no internal tier, and utilization and cost
+than documentation: the Finance team (confidential) can use only the `local-private` alias, while
+HR (public) can also use `cloud-general`. The lab has no internal tier, and utilization and cost
 are design guidance that the gateway does not check.
 
 ## Consequences

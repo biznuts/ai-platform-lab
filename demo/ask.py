@@ -3,8 +3,8 @@ the model call (/v1/chat/completions) and the tool calls (LiteLLM's /mcp endpoin
 which models and which MCP servers the key may use; this client cannot widen that.
 
   kubectl -n platform port-forward svc/litellm 4000:4000
-  python demo/ask.py --dept dept-a "When must applications reach the grants office?"
-  python demo/ask.py --dept dept-b --force-tool kb_dept_a-search_kb "overhead rate"   # must fail
+  python demo/ask.py --dept finance "How many days after a trip must an expense claim reach the Finance Office?"
+  python demo/ask.py --dept hr --force-tool kb_finance-search_kb "purchasing thresholds"   # must fail
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -60,7 +61,7 @@ def source_ids(result) -> list[str]:
 def model_names(tools) -> dict[str, object]:
     """Names shown to the model -> the MCP tool to call.
 
-    LiteLLM prefixes tool names with their server ("kb_dept_a-search_kb"). Small models tend to drop
+    LiteLLM prefixes tool names with their server ("kb_finance-search_kb"). Small models tend to drop
     the prefix and call "search_kb", so the model sees the bare name. Only tools this key can see are
     in the map, so the mapping cannot widen access; a clash falls back to the full, unique name.
     """
@@ -71,12 +72,16 @@ def model_names(tools) -> dict[str, object]:
     return names
 
 
+def elapsed_ms(started: float) -> float:
+    return round((time.perf_counter() - started) * 1000, 1)
+
+
 async def steps(dept: str, question: str, model: str, force_tool: str | None,
                 caller: str | None = None) -> AsyncIterator[dict]:
     """Run one question and yield what happens, one event at a time. Shared by this CLI and demo/web.py.
 
     Events: tools, direct (force_tool result), call (the model used a tool), refused (by the gateway),
-    answer, stopped.
+    answer, stopped. Times are in milliseconds: "ms" for one tool call, "model_ms" for all model calls.
     """
     key = json.loads(KEYS.read_text(encoding="utf-8"))[dept]
     headers = {"x-litellm-api-key": f"Bearer {key}",  # LiteLLM's MCP endpoint reads the key here
@@ -88,6 +93,7 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
             yield {"event": "tools", "names": sorted(t.name for t in tools)}
 
             if force_tool:  # call a tool directly, bypassing the model (used by the leakage test)
+                started = time.perf_counter()
                 try:
                     res = await session.call_tool(force_tool, {"query": question})
                 except Exception as e:
@@ -95,7 +101,7 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
                     return
                 # LiteLLM reports a permission refusal as a tool result with isError set.
                 yield {"event": "direct", "allowed": not res.isError, "text": tool_text(res)[:200],
-                       "sources": source_ids(res)}
+                       "sources": source_ids(res), "ms": elapsed_ms(started)}
                 return
 
             llm = AsyncOpenAI(base_url=f"{BASE}/v1", api_key=key)
@@ -105,8 +111,10 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
                 for n, t in by_name.items()]
             messages: list[dict] = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
             retrieved: list[str] = []  # what the tools actually returned, whatever the model says
+            model_ms = 0.0
 
             for _ in range(MAX_STEPS):
+                started = time.perf_counter()
                 try:
                     resp = await llm.chat.completions.create(model=model, messages=messages,
                                                              tools=oa_tools or None,
@@ -114,12 +122,13 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
                 except APIStatusError as e:  # e.g. 403 when the key may not use this model
                     yield {"event": "refused", "status": e.status_code, "text": str(e.message)[:200]}
                     return
+                model_ms += elapsed_ms(started)
                 msg = resp.choices[0].message
                 if not msg.tool_calls:
                     # Deterministic citations: models do not always cite (Cohere often skips it), so the
                     # client always lists the passages the tool really returned.
                     yield {"event": "answer", "model": model, "text": msg.content,
-                           "sources": list(dict.fromkeys(retrieved))}
+                           "sources": list(dict.fromkeys(retrieved)), "model_ms": round(model_ms, 1)}
                     return
                 # Echo back only the standard fields. Providers differ: Cohere rejects extras such as the
                 # `index` LiteLLM adds to each tool call, while vLLM ignores them.
@@ -132,6 +141,7 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
                 messages.append(turn)
                 for call in msg.tool_calls:
                     tool = by_name.get(call.function.name)
+                    started = time.perf_counter()
                     if tool is None:
                         content = "error: tool not available to this key"
                     else:
@@ -140,7 +150,8 @@ async def steps(dept: str, question: str, model: str, force_tool: str | None,
                         content = tool_text(result)
                         retrieved += source_ids(result)
                     yield {"event": "call", "name": call.function.name,
-                           "target": tool.name if tool else "refused", "chars": len(content)}
+                           "target": tool.name if tool else "refused", "chars": len(content),
+                           "ms": elapsed_ms(started)}
                     messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
             yield {"event": "stopped", "rounds": MAX_STEPS}
 
@@ -167,7 +178,7 @@ async def ask(dept: str, question: str, model: str, force_tool: str | None) -> N
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("question")
-    p.add_argument("--dept", required=True, choices=["dept-a", "dept-b"])
+    p.add_argument("--dept", required=True, choices=["finance", "hr"])
     p.add_argument("--model", default="local-private", help="LiteLLM alias: local-private or cloud-general")
     p.add_argument("--force-tool", help="call this MCP tool directly (leakage test)")
     a = p.parse_args()

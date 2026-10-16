@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Callable, Sequence
 
 # Must match terraform var.departments and data/<dept>/ folders.
-ALLOWED_DEPTS = {"dept-a": "kb_dept_a", "dept-b": "kb_dept_b"}
+ALLOWED_DEPTS = {"finance": "kb_finance", "hr": "kb_hr"}
 
 TOP_K_MIN, TOP_K_MAX, TOP_K_DEFAULT = 1, 8, 4
 MAX_QUERY_CHARS = 500

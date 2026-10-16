@@ -1,6 +1,6 @@
 """FastMCP server over streamable HTTP exposing exactly one read-only tool: search_kb.
 
-Run:  DEPT=dept-a MCP_TOKEN_FILE=/run/secrets/mcp/token python -m kb_mcp.server
+Run:  DEPT=finance MCP_TOKEN_FILE=/run/secrets/mcp/token python -m kb_mcp.server
 """
 # No `from __future__ import annotations` here: FastMCP inspects the tool's annotations at runtime
 # (to find the Context parameter), and string annotations break that.

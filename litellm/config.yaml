@@ -5,8 +5,8 @@
 #   confidential  -> local-private only   (on-prem vLLM; data never leaves the lab)
 #   internal      -> local-private, cloud-general
 #   public        -> local-private, cloud-general
-# Dept A (Research Grants Office) handles unfunded proposals -> confidential.
-# Dept B (Teaching & Curriculum Office) handles published course policy -> public.
+# Finance handles draft budgets and supplier data -> confidential.
+# HR's knowledge base holds only published staff policies (no employee records) -> public.
 # Teams, budgets and MCP access are created by litellm/create-teams-and-keys.sh.
 
 model_list:
@@ -32,22 +32,22 @@ model_list:
 # MCP gateway: LiteLLM is the only client of the department servers. Each server gets its own
 # bearer token; per-team access decides which server a key can see (create-teams-and-keys.sh).
 mcp_servers:
-  kb_dept_a:
-    server_id: kb_dept_a                        # fixed id, so team permissions survive a rename
-    url: http://kb-dept-a.mcp.svc.cluster.local:8080/mcp
+  kb_finance:
+    server_id: kb_finance                       # fixed id, so team permissions survive a rename
+    url: http://kb-finance.mcp.svc.cluster.local:8080/mcp
     transport: http
     auth_type: bearer_token
-    auth_value: os.environ/MCP_TOKEN_DEPT_A
+    auth_value: os.environ/MCP_TOKEN_FINANCE
     extra_headers: ["x-litellm-end-user-id"]    # forwarded so the MCP audit log can name the caller
-    description: Dept A (Research Grants Office) knowledge base, read-only search
-  kb_dept_b:
-    server_id: kb_dept_b
-    url: http://kb-dept-b.mcp.svc.cluster.local:8080/mcp
+    description: Finance knowledge base, read-only search
+  kb_hr:
+    server_id: kb_hr
+    url: http://kb-hr.mcp.svc.cluster.local:8080/mcp
     transport: http
     auth_type: bearer_token
-    auth_value: os.environ/MCP_TOKEN_DEPT_B
+    auth_value: os.environ/MCP_TOKEN_HR
     extra_headers: ["x-litellm-end-user-id"]
-    description: Dept B (Teaching & Curriculum Office) knowledge base, read-only search
+    description: HR policy knowledge base, read-only search
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

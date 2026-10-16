@@ -56,6 +56,9 @@ button:disabled { opacity: .6; cursor: progress; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { background: var(--chip); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
 mark.cite { background: var(--mark); color: inherit; border-radius: 4px; padding: 0 2px; }
+a.chip, mark.cite a { color: var(--accent); text-decoration: none; }
+a.chip:hover, mark.cite a:hover { text-decoration: underline; }
+abbr[title] { cursor: help; }
 mark.cite.unverified { background: none; outline: 1.5px dashed var(--warn); }
 footer { margin-top: 22px; font-size: 13px; border-top: 1px solid var(--line); padding-top: 6px; }
 

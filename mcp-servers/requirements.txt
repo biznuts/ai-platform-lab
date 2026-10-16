@@ -3,3 +3,8 @@ mcp==1.12.4
 qdrant-client==1.19.1
 httpx==0.28.1
 uvicorn==0.35.0
+# Transitive pins, copied from the working kb-mcp:0.1.2 image. pydantic 2.14 removed a helper that
+# mcp 1.12.4 imports, so an unpinned build on 2026-10-16 failed at import time.
+pydantic==2.13.5
+pydantic-settings==2.15.0
+starlette==1.7.0

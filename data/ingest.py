@@ -18,7 +18,7 @@ from qdrant_client.models import Distance, PointStruct, VectorParams
 HERE = Path(__file__).parent
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 EMBED_URL = os.environ.get("EMBED_URL", "http://localhost:8081")
-DEPTS = {"dept-a": "kb_dept_a", "dept-b": "kb_dept_b"}  # same map as mcp-servers/kb_mcp/core.py
+DEPTS = {"finance": "kb_finance", "hr": "kb_hr"}  # same map as mcp-servers/kb_mcp/core.py
 MAX_CHARS = 800
 NS = uuid.UUID("6f1b8f0e-0000-4000-8000-00000000ab01")  # fixed namespace for deterministic ids
 

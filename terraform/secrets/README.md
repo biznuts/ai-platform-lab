@@ -5,7 +5,7 @@ Terraform reads one value per file from this folder. Everything here except this
 
 ```bash
 cd terraform/secrets
-for f in litellm_master_key postgres_password mcp_token_dept_a mcp_token_dept_b; do
+for f in litellm_master_key postgres_password mcp_token_finance mcp_token_hr; do
   python -c "import secrets; print(secrets.token_urlsafe(32))" > "$f"
 done
 # LiteLLM requires the master key to start with "sk-":

@@ -34,9 +34,9 @@ make_team() {
     }" | python3 -c 'import json,sys; print(json.load(sys.stdin)["key"])'
 }
 
-KEY_A=$(make_team dept-a '["local-private"]'                  kb_dept_a 5)   # confidential tier
-KEY_B=$(make_team dept-b '["local-private","cloud-general"]'  kb_dept_b 5)   # public tier
+KEY_FIN=$(make_team finance '["local-private"]'                 kb_finance 5)   # confidential tier
+KEY_HR=$(make_team  hr      '["local-private","cloud-general"]' kb_hr      5)   # public tier
 
 umask 077
-printf '{"dept-a": "%s", "dept-b": "%s"}\n' "$KEY_A" "$KEY_B" > "$OUT"
-echo "wrote $OUT (gitignored). Verify: dept-a must NOT be able to call cloud-general or kb_dept_b."
+printf '{"finance": "%s", "hr": "%s"}\n' "$KEY_FIN" "$KEY_HR" > "$OUT"
+echo "wrote $OUT (gitignored). Verify: finance must NOT be able to call cloud-general or kb_hr."

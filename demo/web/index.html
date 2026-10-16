@@ -19,8 +19,8 @@
     <div class="row">
       <label>Department
         <select name="dept">
-          <option value="dept-a">Dept A · grants office (confidential tier)</option>
-          <option value="dept-b">Dept B · teaching policy (public tier)</option>
+          <option value="finance">Finance (confidential tier)</option>
+          <option value="hr">HR (public tier)</option>
         </select>
       </label>
       <label>Model
@@ -36,14 +36,14 @@
       <label class="inline"><input type="radio" name="mode" value="model" checked> Ask the model</label>
       <label class="inline"><input type="radio" name="mode" value="tool"> Call a tool directly (leakage test)</label>
       <select name="tool" aria-label="Tool to call" disabled>
-        <option value="kb_dept_a-search_kb">kb_dept_a-search_kb</option>
-        <option value="kb_dept_b-search_kb">kb_dept_b-search_kb</option>
+        <option value="kb_finance-search_kb">kb_finance-search_kb</option>
+        <option value="kb_hr-search_kb">kb_hr-search_kb</option>
       </select>
     </fieldset>
 
     <label>Question
       <textarea name="question" rows="3" maxlength="500" required
-        placeholder="e.g. How many business days before the funder's deadline must an application reach the grants office?"></textarea>
+        placeholder="e.g. How many days after a trip must an expense claim reach the Finance Office?"></textarea>
     </label>
     <div class="row actions">
       <button type="submit">Ask</button>
@@ -63,7 +63,10 @@
     <div id="results"></div>
   </section>
 
-  <footer class="muted">All knowledge-base data is fictional. Questions are not logged by this page; the MCP
+  <footer class="muted">All knowledge-base data is fictional. Sources link to the documents in the public
+    repo. Each question is answered on its own: nothing from earlier questions is sent to the model. The
+    <abbr title="Search for it in the web.py log on lab-cp.">log id</abbr> on each result matches the server's
+    log lines for that request, which hold any detail the page leaves out. Questions are not logged; the MCP
     audit log keeps only a SHA-256 digest.</footer>
 </main>
 </body>

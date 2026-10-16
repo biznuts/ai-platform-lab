@@ -5,7 +5,7 @@ import importlib
 import sys
 
 
-def load_server(tmp_path, monkeypatch, dept="dept-a"):
+def load_server(tmp_path, monkeypatch, dept="finance"):
     token = tmp_path / "token"
     token.write_text("test-token\n", encoding="utf-8")
     monkeypatch.setenv("DEPT", dept)
@@ -29,5 +29,5 @@ def test_tool_inputs_are_query_and_top_k_only(tmp_path, monkeypatch):
 
 
 def test_collection_comes_from_config(tmp_path, monkeypatch):
-    server = load_server(tmp_path, monkeypatch, dept="dept-b")
-    assert server.COLLECTION == "kb_dept_b"
+    server = load_server(tmp_path, monkeypatch, dept="hr")
+    assert server.COLLECTION == "kb_hr"

@@ -9,8 +9,8 @@ resource "kubernetes_secret_v1" "litellm" {
     LITELLM_MASTER_KEY = local.secret["litellm_master_key"]
     DATABASE_URL       = "postgresql://litellm:${local.secret["postgres_password"]}@postgres.platform.svc.cluster.local:5432/litellm"
     COHERE_API_KEY     = local.secret["cohere_api_key"]
-    MCP_TOKEN_DEPT_A   = local.secret["mcp_token_dept_a"]
-    MCP_TOKEN_DEPT_B   = local.secret["mcp_token_dept_b"]
+    MCP_TOKEN_FINANCE  = local.secret["mcp_token_finance"]
+    MCP_TOKEN_HR       = local.secret["mcp_token_hr"]
   }
 }
 

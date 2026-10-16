@@ -12,11 +12,11 @@ flowchart LR
       pg[("Postgres<br/>keys, spend logs")]
     end
     subgraph mcp ["ns: mcp"]
-      mcpa["kb-dept-a<br/>search_kb (read-only)"]
-      mcpb["kb-dept-b<br/>search_kb (read-only)"]
+      mcpa["kb-finance<br/>search_kb (read-only)"]
+      mcpb["kb-hr<br/>search_kb (read-only)"]
     end
     subgraph data ["ns: data"]
-      qdrant[("Qdrant<br/>kb_dept_a · kb_dept_b")]
+      qdrant[("Qdrant<br/>kb_finance · kb_hr")]
       tei["Embeddings<br/>bge-small (CPU)"]
     end
   end
@@ -30,8 +30,8 @@ flowchart LR
   litellm --> pg
   litellm -- "confidential + public" --> vllm
   litellm -- "public only" --> cohere
-  litellm -- "dept-a key only" --> mcpa
-  litellm -- "dept-b key only" --> mcpb
+  litellm -- "finance key only" --> mcpa
+  litellm -- "hr key only" --> mcpb
   mcpa --> qdrant
   mcpb --> qdrant
   mcpa --> tei

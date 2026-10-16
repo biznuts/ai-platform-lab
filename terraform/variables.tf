@@ -40,11 +40,11 @@ variable "embedding_model" {
 variable "mcp_image" {
   description = "Built locally from mcp-servers/ and imported into K3s (see README)."
   type        = string
-  default     = "kb-mcp:0.1.2"
+  default     = "kb-mcp:0.1.3"
 }
 
 variable "departments" {
   description = "One MCP server per department; must match ALLOWED_DEPTS in mcp-servers/kb_mcp/core.py."
   type        = set(string)
-  default     = ["dept-a", "dept-b"]
+  default     = ["finance", "hr"]
 }

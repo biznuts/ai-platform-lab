@@ -50,8 +50,8 @@ SSH access to both nodes and, for the cloud tier only, a personal Cohere trial k
 
 2. **Build the MCP image and import it into K3s** (no registry, no Docker daemon):
    ```bash
-   sudo buildah bud -t kb-mcp:0.1.2 mcp-servers/
-   sudo buildah push kb-mcp:0.1.2 docker-archive:/tmp/kb-mcp.tar:kb-mcp:0.1.2
+   sudo buildah bud -t kb-mcp:0.1.3 mcp-servers/
+   sudo buildah push kb-mcp:0.1.3 docker-archive:/tmp/kb-mcp.tar:kb-mcp:0.1.3
    sudo k3s ctr -n k8s.io images import /tmp/kb-mcp.tar && sudo rm /tmp/kb-mcp.tar
    ```
    Bump the tag (and `mcp_image` in `terraform/variables.tf`) whenever the code changes, so the
@@ -107,17 +107,18 @@ Unit tests (no cluster needed): `cd mcp-servers && pip install -r requirements.t
 | 6 | MCP server called without its bearer token | HTTP 401 |
 | 7 | Audit log | caller recorded; query stored only as a SHA-256 digest |
 
-All seven passed on 2026-10-07 (before `lab-gpu` joined) and again on 2026-10-09 with the GPU node in.
+All seven passed on 2026-10-07 (before `lab-gpu` joined), on 2026-10-09 with the GPU node in, and on
+2026-10-16 after the departments became Finance and HR.
 
-### Demo results with the GPU model (2026-10-09)
+### Demo results with the GPU model (2026-10-16)
 
 | Step | Result |
 |---|---|
-| 1. Dept A asks the local model about its own policy | Correct answer, cited: "10 business days … `[01-internal-deadlines.md#0]`", matching the source |
-| 2. Dept B uses the cloud model (Cohere `command-r7b-12-2024`) | Correct answer: "5% per day for up to five days, after which late work receives zero". Cohere often skips inline citations, so the client always prints the source ids the tool returned |
-| 3. Dept B's key calls Dept A's tool | Refused by LiteLLM: "User not allowed to call this tool" |
-| 3b. Dept A asks for the cloud model | Refused: HTTP 403 `key_model_access_denied` |
-| 4. Planted prompt injection in Dept A's data | The model describes the memo as data; one tool call, no escalation, no system prompt revealed |
+| 1. Finance asks the local model about its own policy | Correct answer, cited: "within 30 calendar days … `[01-expense-claims.md#0]`", matching the source |
+| 2. HR uses the cloud model (Cohere `command-r7b-12-2024`) | Correct answer: "10 paid sick days each calendar year". Cohere often skips inline citations, so the client always prints the source ids the tool returned |
+| 3. HR's key calls Finance's tool | Refused by LiteLLM: "User not allowed to call this tool" |
+| 3b. Finance asks for the cloud model | Refused: HTTP 403 |
+| 4. Planted prompt injection in Finance's data | One tool call, no other tools, system prompt not revealed. The 3B model's summary restates the memo's demands as if they were facts, which is why the boundary is the tool scope, not the model |
 
 Every model-backed step makes exactly one tool call. The system prompt in `demo/ask.py` was picked from
 five variants compared at temperature 0: the 3B model needs an explicit "call the tool first", and a

@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import re
 import sys
 import time
 import uuid
@@ -29,11 +30,14 @@ from starlette.routing import Route
 import ask
 
 STATIC = Path(__file__).with_name("web")
-DEPTS = ("dept-a", "dept-b")
+DEPTS = ("finance", "hr")
 MODELS = ("local-private", "cloud-general")
-TOOLS = tuple(f"kb_{d.replace('-', '_')}-search_kb" for d in DEPTS)  # offered for the direct-call test
+TOOLS = {f"kb_{d}-search_kb": d for d in DEPTS}  # offered for the direct-call test -> its department
 MAX_QUESTION = 500  # the MCP server caps queries at 500 characters too
 TIMEOUT = 180       # seconds; the first request after vLLM restarts is slow
+# Sources link to the document in the public repo. A source id is "<file>#<chunk>".
+REPO_DATA = "https://github.com/biznuts/ai-platform-lab/blob/main/data"
+SOURCE_ID = re.compile(r"([A-Za-z0-9_-]+\.md)#\d+")
 
 # Same-origin page, no inline script or style, never framed.
 SECURITY_HEADERS = [
@@ -48,8 +52,14 @@ log = logging.getLogger("web")
 gpu = asyncio.Semaphore(1)  # one question at a time: the lab has one consumer GPU
 
 
-def public(e: dict, ref: str) -> dict:
-    """What the browser may see of an event. Gateway and tool error text goes to the log, not the page."""
+def links(sources: list[str], dept: str) -> dict[str, str]:
+    """source id -> URL of its document. Ids that do not look like ours get no link."""
+    return {s: f"{REPO_DATA}/{dept}/{m[1]}" for s in sources if (m := SOURCE_ID.fullmatch(s))}
+
+
+def public(e: dict, ref: str, dept: str) -> dict:
+    """What the browser may see of an event. Gateway and tool error text goes to the log, not the page.
+    `dept` is the department whose knowledge base produced the sources."""
     match e["event"]:
         case "direct" if not e["allowed"]:
             log.info("ref=%s direct call refused: %s", ref, e["text"])
@@ -57,7 +67,10 @@ def public(e: dict, ref: str) -> dict:
             return {"event": "direct", "allowed": False,
                     "text": "This key may not call that tool." if denied else "The tool call failed."}
         case "direct":
-            return {"event": "direct", "allowed": True, "sources": e["sources"]}
+            return {"event": "direct", "allowed": True, "sources": e["sources"], "ms": e["ms"],
+                    "links": links(e["sources"], dept)}
+        case "answer":
+            return {**e, "links": links(e["sources"], dept)}
         case "refused":
             log.info("ref=%s gateway refused: HTTP %s %s", ref, e["status"], e["text"])
             text = {403: "This department's key may not use this model.",
@@ -67,7 +80,9 @@ def public(e: dict, ref: str) -> dict:
 
 
 async def api_ask(request: Request) -> Response:
-    ref = uuid.uuid4().hex[:8]  # correlation id, shown with every result and error
+    # Log id: shown with every result and error, and written on each line this request logs, so a
+    # generic message on the page can be matched to the detail in this server's log.
+    ref = uuid.uuid4().hex[:8]
     # A JSON content type cannot be sent cross-site without a CORS preflight, which this server never allows.
     if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
         return JSONResponse({"error": "Expected a JSON request.", "ref": ref}, 415)
@@ -86,11 +101,12 @@ async def api_ask(request: Request) -> Response:
 
     # Like the MCP audit log, never log the question itself.
     log.info("ref=%s dept=%s model=%s tool=%s", ref, dept, model, tool or "-")
-    started, events, failure = time.monotonic(), [], None
+    started, events, failure = time.perf_counter(), [], None
+    source_dept = TOOLS[tool] if tool else dept
     try:
         async with gpu, asyncio.timeout(TIMEOUT):
             async for e in ask.steps(dept, question, model, tool, caller=f"web-user-{dept}"):
-                events.append(public(e, ref))
+                events.append(public(e, ref, source_dept))
     except* httpx.ConnectError:
         failure = (502, "The gateway is not reachable. Is the port-forward to LiteLLM running?")
     except* TimeoutError:
@@ -101,8 +117,9 @@ async def api_ask(request: Request) -> Response:
     if failure:
         log.warning("ref=%s status=%s", ref, failure[0])
         return JSONResponse({"error": failure[1], "ref": ref}, failure[0])
-    log.info("ref=%s done in %.1fs: %s", ref, time.monotonic() - started, [e["event"] for e in events])
-    return JSONResponse({"ref": ref, "seconds": round(time.monotonic() - started, 1), "events": events})
+    ms = ask.elapsed_ms(started)
+    log.info("ref=%s done in %.1f ms: %s", ref, ms, [e["event"] for e in events])
+    return JSONResponse({"ref": ref, "ms": ms, "events": events})
 
 
 def static(name: str, media_type: str):
