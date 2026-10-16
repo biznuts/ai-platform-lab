@@ -1,0 +1,59 @@
+# LiteLLM gateway config. Secrets come from environment variables (Kubernetes secret "litellm"),
+# referenced as os.environ/NAME — never written here.
+#
+# Classification-to-model rule (enforced by WHICH aliases a team may use, not by prompt wording):
+#   confidential  -> local-private only   (on-prem vLLM; data never leaves the lab)
+#   internal      -> local-private, cloud-general
+#   public        -> local-private, cloud-general
+# Dept A (Research Grants Office) handles unfunded proposals -> confidential.
+# Dept B (Teaching & Curriculum Office) handles published course policy -> public.
+# Teams, budgets and MCP access are created by litellm/create-teams-and-keys.sh.
+
+model_list:
+  - model_name: local-private
+    litellm_params:
+      model: hosted_vllm/local-private          # vLLM --served-model-name
+      api_base: http://vllm.models.svc.cluster.local:8000/v1
+    model_info:
+      data_classification: confidential         # informational; access is what enforces it
+
+  - model_name: cloud-general
+    litellm_params:
+      model: cohere_chat/command-r7b-12-2024    # smallest live Cohere chat model with tool use (checked 2026-10-09)
+      api_key: os.environ/COHERE_API_KEY
+    model_info:
+      data_classification: public
+
+  - model_name: embed-local
+    litellm_params:
+      model: huggingface/BAAI/bge-small-en-v1.5 # VERIFY: LiteLLM provider route for a self-hosted TEI endpoint
+      api_base: http://embeddings.data.svc.cluster.local
+
+# MCP gateway: LiteLLM is the only client of the department servers. Each server gets its own
+# bearer token; per-team access decides which server a key can see (create-teams-and-keys.sh).
+mcp_servers:
+  kb_dept_a:
+    server_id: kb_dept_a                        # fixed id, so team permissions survive a rename
+    url: http://kb-dept-a.mcp.svc.cluster.local:8080/mcp
+    transport: http
+    auth_type: bearer_token
+    auth_value: os.environ/MCP_TOKEN_DEPT_A
+    extra_headers: ["x-litellm-end-user-id"]    # forwarded so the MCP audit log can name the caller
+    description: Dept A (Research Grants Office) knowledge base, read-only search
+  kb_dept_b:
+    server_id: kb_dept_b
+    url: http://kb-dept-b.mcp.svc.cluster.local:8080/mcp
+    transport: http
+    auth_type: bearer_token
+    auth_value: os.environ/MCP_TOKEN_DEPT_B
+    extra_headers: ["x-litellm-end-user-id"]
+    description: Dept B (Teaching & Curriculum Office) knowledge base, read-only search
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL         # virtual keys, teams, budgets and spend logs live here
+
+litellm_settings:
+  drop_params: true
+  # Do not log prompt or response bodies; spend logs keep metadata only.
+  turn_off_message_logging: true

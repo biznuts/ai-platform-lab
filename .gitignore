@@ -1,0 +1,27 @@
+# Secrets — never commit. Only the *.example files are tracked.
+terraform/secrets/*
+!terraform/secrets/*.example
+!terraform/secrets/README.md
+*.env
+.env*
+!*.env.example
+demo/keys.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+terraform.tfvars
+.terraform.lock.hcl
+
+# Kubernetes
+kubeconfig*
+*.kubeconfig
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

@@ -1,0 +1,2 @@
+kubeconfig_path = "/path/outside/repo/k3s.yaml"
+# vllm_model = "Qwen/Qwen2.5-7B-Instruct-AWQ"   # stretch: tight on 8 GB

@@ -1,0 +1,2 @@
+# Everything here runs on Linux nodes: keep LF line endings in every checkout, including on Windows.
+* text=auto eol=lf

@@ -1,0 +1,3 @@
+# Exact pins; keep mcp in step with mcp-servers/.
+mcp==1.12.4
+openai==1.99.9

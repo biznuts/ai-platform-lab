@@ -1,0 +1,5 @@
+# Exact pins. qdrant-client tracks the server's minor version (Qdrant chart 1.19.x).
+mcp==1.12.4
+qdrant-client==1.19.1
+httpx==0.28.1
+uvicorn==0.35.0
