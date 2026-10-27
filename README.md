@@ -9,6 +9,28 @@ policies, secrets). Everything else is a step in the Quickstart: node setup (`bo
 files, the MCP image build, the gateway's teams and keys, and the knowledge-base ingest. All data is
 fictional.
 
+## See it running
+
+![The web UI runs two demo scenarios. A Finance question goes through the gateway to vLLM on the GPU
+node, then to Finance's MCP server and Qdrant, and the answer comes back citing its source. Then HR's
+key calls Finance's tool directly and the gateway refuses it.](docs/images/web-ui-demo.gif)
+
+The browser front end (`demo/web.py`, step 7 of the Quickstart) runs two of the demo scenarios: first
+a Finance question answered by the local model through Finance's MCP server, then HR's key calling
+Finance's tool directly, refused at the gateway. After each result, the diagram replays the request
+hop by hop with its measured times. The recording is in real time.
+
+<details>
+<summary>Full page after one question: the answer, its checked citation and the retrieved sources</summary>
+
+![The web UI after the Finance question "How many days after a trip must an expense claim reach the
+Finance Office?". It shows the request path, each hop's time, the answer "30 days" citing
+01-expense-claims.md#0, and the four retrieved sources.](docs/images/web-ui.png)
+
+</details>
+
+Both were captured on the lab on 2026-10-22.
+
 ## What it demonstrates
 
 | Area | In this repo |
