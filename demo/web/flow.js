@@ -13,6 +13,7 @@ const Flow = (() => {
   const replay = document.getElementById("flow-replay");
 
   const SPEED = 0.2, MIN_MOVE = 450;  // px per ms in diagram units; shortest move in ms
+  const DELAY = 1500;  // after Ask, let the form fold and the eye find the diagram before anything moves
 
   // Paths in diagram coordinates, following the drawn edges.
   const rev = pts => pts.slice().reverse();
@@ -156,7 +157,7 @@ const Flow = (() => {
     });
   }
 
-  let raf = 0, last = null, pending = null;  // pending: when waiting() started, until finish()
+  let raf = 0, timer = 0, last = null, pending = null;  // pending: when the first hop starts, until finish()
 
   function stopAnimation() {
     cancelAnimationFrame(raf);
@@ -243,21 +244,36 @@ const Flow = (() => {
     // from there, so the browser-to-gateway hop is drawn once.
     waiting(req) {
       last = null;
-      pending = { start: performance.now() };
+      clearTimeout(timer);
+      stopAnimation();
+      showMark(null);
+      setBox(null);
+      pending = { start: performance.now() + DELAY };
       replay.hidden = true;
       label.textContent = `Waiting for the gateway: ${req.dept} · ${req.tool || req.model}`;
-      run([firstScene(req), { text: "Waiting for the answer. The first model call after a restart can take a while.",
-                              acts: [at("gw", Infinity, "wait")] }]);
+      const sc = [firstScene(req), { text: "Waiting for the answer. The first model call after a restart can take a while.",
+                                     acts: [at("gw", Infinity, "wait")] }];
+      renderList(sc);
+      timer = setTimeout(() => run(sc), DELAY);
     },
     // The answer to the request waiting() started.
     finish(req, body) {
+      const wait = pending ? pending.start - performance.now() : 0;
+      if (wait > 0) {  // the answer came back during the pause: keep the pause, then play from the start
+        label.textContent = heading(req, body);
+        last = { req, body };
+        clearTimeout(timer);
+        timer = setTimeout(() => this.play(req, body), wait);
+        return;
+      }
       const sc = scenes(req, body);
-      const offset = pending ? Math.min(performance.now() - pending.start, sc[0].acts.reduce((n, a) => n + actMs(a), 0)) : 0;
+      const offset = pending ? Math.min(-wait, sc[0].acts.reduce((n, a) => n + actMs(a), 0)) : 0;
       this.play(req, body, offset);
     },
     play(req, body, offset = 0) {
       last = { req, body };
       pending = null;
+      clearTimeout(timer);
       replay.hidden = true;
       label.textContent = heading(req, body);
       run(scenes(req, body), offset);
